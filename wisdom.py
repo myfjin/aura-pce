@@ -12,13 +12,15 @@ ships here is the honest logging primitive the gate depends on.)
 from __future__ import annotations
 import hashlib
 import json
-import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-DATA = Path(os.environ.get("AURA_PCE_HOME", HERE / "data"))
+sys.path.insert(0, str(HERE))
+import paths
+
+DATA = paths.data_home()
 FIRES = DATA / "fires.jsonl"
 
 

@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # The dependency-free core: the provenance proof + every stdlib self-test, on all
+  # supported Pythons. This is the gate — it needs nothing but the standard library.
+  stdlib:
+    name: stdlib (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install (core only — no dependencies)
+        run: python -m pip install -e .
+      - name: Provenance proof (i_care --prove)
+        run: python i_care.py --prove
+      - name: All stdlib self-tests
+        run: aura-pce selftest
+      - name: Telemetry adapter self-tests
+        run: python -c "import sources; raise SystemExit(sources.selftest())"
+      - name: The two earned metrics print honestly
+        run: aura-pce level
+
+  # The live-recognition path: install the [live] extra (a real sentence embedder + psutil),
+  # then prove recognition, the derived calibration, the end-to-end runner and a real watch.
+  live:
+    name: live recognition + telemetry
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Cache the embedding model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-all-MiniLM-L6-v2-v1
+      - name: Install with the [live] extra
+        run: python -m pip install -e ".[live]"
+      - name: Embedder self-test
+        run: python embedder.py --selftest
+      - name: Recognition self-test (against the sample registry)
+        run: python logic_lane.py --selftest
+      - name: Recognition calibration (measured, not guessed)
+        run: aura-pce calibrate --report
+      - name: Source adapters + end-to-end runner (fake spike → EMIT)
+        run: python -c "import sources; raise SystemExit(sources.selftest())"
+      - name: Watch real /proc telemetry for a few samples (must not error)
+        run: aura-pce watch --source proc --iterations 3 --interval 0.2

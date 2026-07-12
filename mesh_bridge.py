@@ -30,15 +30,14 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-import os
-
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import i_care
 import logic_lane
 import ontology
+import paths
 
-DATA = Path(os.environ.get("AURA_PCE_HOME", HERE / "data"))
+DATA = paths.data_home()
 STREAMS = DATA / "streams"
 SYS_REG = DATA / "sample_registry.jsonl"
 # The monitoring organ's OWN ledger, kept separate from the gate's advice-fire log: a
@@ -136,37 +135,56 @@ def feedable_types(consumed_nouns: list, available: dict) -> list | None:
     return picked
 
 
-def gate_event(row: dict, stream: str, rows_cache=None, log: bool = False) -> dict:
-    sit = render(row, stream)
+def gate_typed(sit: str, avail_fields: dict, registry: Path = SYS_REG, rows_cache=None,
+               log: bool = False, evidence: dict | None = None) -> dict:
+    """The source-agnostic gate: given a rendered situation and the Python types the source
+    can actually SUPPLY, run recognition → precondition-fit → the i_care 4-check gate, and
+    return the decision. Every telemetry adapter (mesh streams AND live psutil/proc/journal/
+    node_exporter) funnels through here, so i_care stays the single arbiter for all of them.
+
+    `avail_fields` = {field_name: python-type-string} the event offers as inputs.
+    `evidence` = {node, z, event_ts} carried into the ledger when a gated EMIT is logged."""
     if not sit:
         return {"situation": "", "decision": "SKIP"}
-    r = logic_lane.logic_need(sit, defer_log=False, registry=SYS_REG)
+    r = logic_lane.logic_need(sit, defer_log=False, registry=registry)
     if not r.fired:
-        return {"situation": sit, "decision": "DEFER", "pattern": None}
-    rows = rows_cache if rows_cache is not None else i_care._rows(SYS_REG)
+        return {"situation": sit, "decision": "DEFER", "pattern": None, "score": r.confidence}
+    rows = rows_cache if rows_cache is not None else i_care._rows(registry)
     prow = i_care._row_by_id(r.axiom_id, rows)
     consumed = [c["noun"] for c in (prow.get("signature") or {}).get("consumes", [])] if prow else []
-    itypes = feedable_types(consumed, typed_fields(row, stream)) if consumed else None
+    itypes = feedable_types(consumed, avail_fields) if consumed else None
     rep = i_care.i_care(sit, pattern_id=r.axiom_id, input_types=itypes,
-                        registry=SYS_REG, rows=rows, log=False)   # sovereign log below, not wisdom
+                        registry=registry, rows=rows, log=False)   # sovereign log below, not wisdom
     constraint = next((c.meta.get("constraints") for c in rep.checks
                        if c.name == "axiom" and c.passed), None)
     emit_hash = ""
     if rep.gate and log:
-        emit_hash = _log_emit(row, stream, sit, r.axiom_id, r.confidence)
+        ev = evidence or {}
+        emit_hash = _log_emit(ev.get("node"), ev.get("z"), ev.get("event_ts", ""),
+                              ev.get("stream", "live"), sit, r.axiom_id, r.confidence)
     return {"situation": sit, "decision": "EMIT" if rep.gate else "WITHHOLD",
             "pattern": r.axiom_id, "score": r.confidence, "feed": itypes,
             "constraint": constraint, "level": rep.level["cite"], "emit_hash": emit_hash}
 
 
-def _log_emit(row: dict, stream: str, sit: str, pattern: str, score: float) -> str:
+def gate_event(row: dict, stream: str, rows_cache=None, log: bool = False) -> dict:
+    """Gate one mesh-stream telemetry row (render + type it, then defer to gate_typed)."""
+    sit = render(row, stream)
+    if not sit:
+        return {"situation": "", "decision": "SKIP"}
+    h = _hot_metric(row) if stream == "derived-features" else None
+    evidence = {"node": row.get("node"), "z": h[1].get("z_5m") if h else None,
+                "event_ts": str(row.get("ts", "")), "stream": stream}
+    return gate_typed(sit, typed_fields(row, stream), registry=SYS_REG,
+                      rows_cache=rows_cache, log=log, evidence=evidence)
+
+
+def _log_emit(node, z, event_ts: str, stream: str, sit: str, pattern: str, score: float) -> str:
     """Append a mesh emit PROPOSAL to the sovereign ledger (ungraded). Evidence (z-score,
     node, ts) travels with it so the human grade is informed. Idempotent-ish: an
-    (event_ts, pattern) hash so the same event re-run doesn't double-log."""
+    (event_ts, pattern, situation) hash so the same event re-run doesn't double-log."""
     import hashlib
-    h = _hot_metric(row) if stream == "derived-features" else None
-    z = h[1].get("z_5m") if h else None
-    ev_ts = str(row.get("ts", ""))
+    ev_ts = str(event_ts)
     eh = hashlib.sha1(f"{ev_ts}|{pattern}|{sit}".encode()).hexdigest()[:12]
     MESH_LEDGER.parent.mkdir(parents=True, exist_ok=True)
     existing = set()
@@ -175,7 +193,7 @@ def _log_emit(row: dict, stream: str, sit: str, pattern: str, score: float) -> s
     if eh in existing:
         return eh
     rec = {"emit_hash": eh, "logged_ts": __import__("time").time(), "event_ts": ev_ts,
-           "stream": stream, "node": row.get("node"), "situation": sit[:200],
+           "stream": stream, "node": node, "situation": sit[:200],
            "pattern": pattern, "score": round(score, 3), "z_5m": z,
            "graded": False, "outcome": None}
     with MESH_LEDGER.open("a", encoding="utf-8") as f:
@@ -229,13 +247,13 @@ def selftest() -> int:
     checks.append(("feed: void consume is always satisfiable",
                    feedable_types(["void"], {"node": "str"}) == []))
     # render faithfulness
-    df = {"node": ".13", "window_seconds": 900,
+    df = {"node": "node-a", "window_seconds": 900,
           "raw": {"thermal_c": {"latest": 47.8, "z_5m": 3.0, "delta_5m": 0.8}}}
     s = render(df, "derived-features")
-    checks.append(("render carries the real node + z-score", ".13" in s and "3.0" in s))
+    checks.append(("render carries the real node + z-score", "node-a" in s and "3.0" in s))
     checks.append(("typed_fields reads metric as float",
                    typed_fields(df, "derived-features").get("value") == "float"))
-    ne = {"node": ".5", "event": "failover_attempted"}
+    ne = {"node": "node-b", "event": "failover_attempted"}
     checks.append(("network render", "failover_attempted" in render(ne, "network-events")))
     ok = sum(1 for _, p in checks if p)
     for n, p in checks:

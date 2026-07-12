@@ -10,10 +10,13 @@ Everything below is synthetic and clearly labelled. Run: `python3 make_sample_da
 """
 from __future__ import annotations
 import json
-import os
+import sys
 from pathlib import Path
 
-DATA = Path(os.environ.get("AURA_PCE_HOME", Path(__file__).resolve().parent / "data"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paths
+
+DATA = paths.data_home()
 DATA.mkdir(parents=True, exist_ok=True)
 
 

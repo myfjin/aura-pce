@@ -30,7 +30,7 @@ NOT semantic correctness. A pattern can pass all four and still be wrong on weir
 that is what the grading catches and the Beta records. "I care" is the pause, not an oracle.
 
   python3 i_care.py "situation text" [--pattern PATTERN_ID] [--types "List[float],float"]
-  python3 i_care.py --prove        # the fundraising provenance: lint the selftests + run them
+  python3 i_care.py --prove        # the provenance: lint the selftests + run them
   python3 i_care.py --selftest
   python3 i_care.py --level         # show the earned validity level with its n
 """
@@ -43,16 +43,15 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-import os
-
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))   # assert_linter, ontology, logic_lane ship as siblings
 
 import ontology  # pure-stdlib (ast); safe at import time
+import paths
 
-# All runtime data resolves under one root: the repo's ./data by default, or wherever
-# AURA_PCE_HOME points for a real deployment. Nothing is written outside it.
-DATA = Path(os.environ.get("AURA_PCE_HOME", HERE / "data"))
+# All runtime data resolves under one root (see paths.py): $AURA_PCE_HOME, else the repo's
+# ./data when run from a checkout, else a user data dir when pip-installed.
+DATA = paths.data_home()
 REGISTRY = DATA / "sample_registry.jsonl"
 FIRES = DATA / "i-care-fires.jsonl"
 CALLER = "i_care"
@@ -65,7 +64,7 @@ assert 0.2 <= THRESHOLD <= 0.9
 
 # Deterministic perturbations for ROBUSTNESS — NOISE that must not change a robust
 # recommendation (casing, punctuation, doubled spaces, a dropped filler word). No RNG:
-# a fundraising metric must be reproducible by a stranger, byte-for-byte.
+# a metric must be reproducible by a stranger, byte-for-byte.
 _FILLER = re.compile(r"\b(please|just|really|actually|kind of|sort of|maybe|so)\b", re.I)
 
 # Identity tokens that SHOULD be operationally irrelevant — the same signal must earn the
@@ -284,7 +283,7 @@ def i_care(situation: str, pattern_id: str | None = None,
     """Run the four self-tests on a candidate (situation → recommended pattern) BEFORE the
     PCE speaks. Recognizes the pattern when not named. Logs a lane-tagged fire iff GATED.
     `registry` selects the sovereign conscience (None = DS; sysadmin_registry.jsonl for the
-    fundraising sysadmin PCE) — it drives BOTH the axiom rows AND recognition. `rows` /
+    sysadmin PCE) — it drives BOTH the axiom rows AND recognition. `rows` /
     `recognizer` override those directly (selftest injection)."""
     rows = _rows(registry) if rows is None else rows
     rec = recognizer or (lambda t: _default_recognizer(t, registry))
@@ -334,7 +333,7 @@ def render(r: ICareReport) -> str:
     return "\n".join(lines)
 
 
-# ── the fundraising provenance: the selftests must themselves be REAL ────────
+# ── the provenance: the selftests must themselves be REAL ────────
 
 def lint_selftests(path: Path | None = None):
     """Run assert_linter over THIS file — the selftest that can't fail is not a selftest.
@@ -433,7 +432,7 @@ def selftest() -> int:
 
 
 def prove() -> int:
-    """The fundraising provenance, reproducible by a stranger: (a) the selftests are REAL
+    """The provenance, reproducible by a stranger: (a) the selftests are REAL
     (assert_linter), (b) they run green, (c) the LEVEL is measured with its n + method."""
     print("=== I CARE — provenance (prove-then-cite) ===\n")
     verdict, detail = lint_selftests()

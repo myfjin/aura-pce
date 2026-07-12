@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aura-pce"
+version = "0.1.0"
+description = "The I CARE self-test gate: an operational advisor that runs four self-tests before it speaks, and refuses to speak when it cannot verify itself."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Illia Hladkyi" }]
+keywords = ["monitoring", "observability", "self-testing", "advisor", "sysadmin", "telemetry", "honest-ai"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Monitoring",
+    "Topic :: System :: Systems Administration",
+]
+dependencies = []   # the core is pure standard library — by design.
+
+[project.optional-dependencies]
+# Live recognition + telemetry: everything `aura-pce watch` needs to gate your own machine.
+live = [
+    "numpy>=1.21",
+    "sentence-transformers>=2.2",
+    "psutil>=5.9",
+]
+# Just the sentence embedder, if you want live recognition without the telemetry reader.
+embed = ["numpy>=1.21", "sentence-transformers>=2.2"]
+dev = ["build", "twine"]
+
+[project.urls]
+Homepage = "https://github.com/myfjin/aura-pce"
+Project = "https://realityoptimizer.app"
+
+[project.scripts]
+aura-pce = "cli:main"
+
+[tool.setuptools]
+# Flat layout: the modules live at the repo root so `python3 i_care.py --prove` (cited by the
+# site and the docs) keeps working unchanged, while `pip install aura-pce` installs the same
+# files. Sample/live data is NOT packaged — `aura-pce init` writes it into the data home.
+py-modules = [
+    "i_care", "logic_lane", "ontology", "mesh_bridge", "mesh_grade",
+    "outcomes", "wisdom", "assert_linter", "make_sample_data",
+    "embedder", "calibrate", "cli", "paths",
+]
+
+[tool.setuptools.packages.find]
+include = ["sources*"]

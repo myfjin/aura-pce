@@ -1,8 +1,13 @@
 __pycache__/
 *.pyc
 *.npz
+*_misses.jsonl
+logic_misses.jsonl
 data/fires.jsonl
 data/i-care-fires.jsonl
 data/streams/
 .venv/
 .DS_Store
+build/
+dist/
+*.egg-info/

@@ -1,0 +1,172 @@
+{
+  "embedder": "sentence-transformers",
+  "registry": "sample",
+  "chosen": {
+    "floor": 0.22,
+    "margin": 0.0,
+    "pos_recall": 1.0,
+    "pos_hit": 12,
+    "neg_fires": 0,
+    "neg_rate": 0.0,
+    "separation": 0.056
+  },
+  "before": {
+    "floor": 0.3,
+    "margin": 0.0,
+    "pos_recall": 0.917,
+    "pos_hit": 11,
+    "neg_fires": 0,
+    "neg_rate": 0.0
+  },
+  "measurement": {
+    "pos": [
+      {
+        "text": "a writer crashed before the file rename completed",
+        "expect": "atomic_write_temp_rename",
+        "axiom": "atomic_write_temp_rename",
+        "top": 0.615,
+        "margin": 0.471
+      },
+      {
+        "text": "the process died mid-write and left a half-written file",
+        "expect": "atomic_write_temp_rename",
+        "axiom": "atomic_write_temp_rename",
+        "top": 0.479,
+        "margin": 0.255
+      },
+      {
+        "text": "a metric reading crossed the z-score anomaly threshold",
+        "expect": "zscore_anomaly",
+        "axiom": "zscore_anomaly",
+        "top": 0.679,
+        "margin": 0.488
+      },
+      {
+        "text": "temperature spiked far above its normal baseline z-score",
+        "expect": "zscore_anomaly",
+        "axiom": "zscore_anomaly",
+        "top": 0.368,
+        "margin": 0.199
+      },
+      {
+        "text": "free disk space dropped below the safety floor",
+        "expect": "disk_space_guard",
+        "axiom": "disk_space_guard",
+        "top": 0.555,
+        "margin": 0.344
+      },
+      {
+        "text": "the volume is almost full so refuse further writes",
+        "expect": "disk_space_guard",
+        "axiom": "disk_space_guard",
+        "top": 0.291,
+        "margin": 0.053
+      },
+      {
+        "text": "verify the restored backup matches the original checksum",
+        "expect": "backup_verify_checksum",
+        "axiom": "backup_verify_checksum",
+        "top": 0.758,
+        "margin": 0.631
+      },
+      {
+        "text": "a restored backup must match the original bytes",
+        "expect": "backup_verify_checksum",
+        "axiom": "backup_verify_checksum",
+        "top": 0.556,
+        "margin": 0.373
+      },
+      {
+        "text": "reclaim a stale lock whose owning process is dead",
+        "expect": "stale_lock_detect",
+        "axiom": "stale_lock_detect",
+        "top": 0.66,
+        "margin": 0.311
+      },
+      {
+        "text": "the lock is held by a process that no longer exists",
+        "expect": "stale_lock_detect",
+        "axiom": "stale_lock_detect",
+        "top": 0.58,
+        "margin": 0.22
+      },
+      {
+        "text": "sustained memory pressure has exceeded the limit",
+        "expect": "memory_pressure",
+        "axiom": "memory_pressure",
+        "top": 0.596,
+        "margin": 0.318
+      },
+      {
+        "text": "memory pressure is high and keeps climbing",
+        "expect": "memory_pressure",
+        "axiom": "memory_pressure",
+        "top": 0.513,
+        "margin": 0.306
+      }
+    ],
+    "neg": [
+      {
+        "text": "is the difference between my two conversion rates statistically significant",
+        "axiom": "zscore_anomaly",
+        "top": 0.096,
+        "margin": 0.043
+      },
+      {
+        "text": "integrate this smooth function to high accuracy",
+        "axiom": "backup_verify_checksum",
+        "top": 0.06,
+        "margin": 0.073
+      },
+      {
+        "text": "fit an accelerated failure time survival model",
+        "axiom": "atomic_write_temp_rename",
+        "top": 0.159,
+        "margin": 0.023
+      },
+      {
+        "text": "boost weak stumps into a strong classifier",
+        "axiom": "zscore_anomaly",
+        "top": 0.164,
+        "margin": 0.014
+      },
+      {
+        "text": "what is the weather forecast for tomorrow",
+        "axiom": "memory_pressure",
+        "top": 0.089,
+        "margin": 0.059
+      },
+      {
+        "text": "draft the release announcement for the blog",
+        "axiom": "atomic_write_temp_rename",
+        "top": 0.097,
+        "margin": 0.084
+      },
+      {
+        "text": "recommend a good pizza topping for friday",
+        "axiom": "backup_verify_checksum",
+        "top": 0.005,
+        "margin": 0.019
+      },
+      {
+        "text": "translate this sentence into French please",
+        "axiom": "memory_pressure",
+        "top": 0.076,
+        "margin": 0.013
+      },
+      {
+        "text": "authorization granted proceed with the deployment",
+        "axiom": "disk_space_guard",
+        "top": 0.073,
+        "margin": 0.043
+      },
+      {
+        "text": "schedule a meeting for next tuesday afternoon",
+        "axiom": "atomic_write_temp_rename",
+        "top": -0.034,
+        "margin": 0.017
+      }
+    ]
+  },
+  "note": "FLOOR/MARGIN derived by calibrate.py; re-run for any other embedder or registry."
+}

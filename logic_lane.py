@@ -33,11 +33,11 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-import os
-
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-DATA = Path(os.environ.get("AURA_PCE_HOME", HERE / "data"))
+import paths
+
+DATA = paths.data_home()
 REGISTRY = DATA / "sample_registry.jsonl"
 # Harvested-source dirs (used only when re-deriving a registry from pattern source — the
 # public twin ships a ready-made sample_registry.jsonl and never needs these).
@@ -65,6 +65,55 @@ def _queue_for(registry) -> Path:
 # widen the accept-set to force a fire (the ds_need KNOWN_MISSES discipline).
 THRESHOLD = 0.30
 assert 0.2 <= THRESHOLD <= 0.9
+
+# Recognition acceptance uses two knobs, defaulting to the inherited-safe single threshold and
+# NO margin (backward-compatible: on the sample registry this already fires 0/10 out-of-domain).
+#   RECOG_FLOOR  — minimum top-1 cosine to fire at all.
+#   RECOG_MARGIN — minimum top1 − top2 gap ("domain-confidence": fire only when ONE axiom
+#                  clearly owns the situation). This is the knob that cuts over-fire on a LARGE
+#                  registry, where many axioms let a weak spurious match clear an absolute floor.
+# A deployment overrides them from a MEASURED data/calibration.json (written by calibrate.py) —
+# evidence, never a guessed constant. A missing/malformed file falls back to the safe defaults.
+RECOG_FLOOR = THRESHOLD
+RECOG_MARGIN = 0.0
+
+
+def _load_calibration() -> None:
+    global RECOG_FLOOR, RECOG_MARGIN
+    try:
+        p = DATA / "calibration.json"
+        if not p.exists():
+            return
+        chosen = json.loads(p.read_text()).get("chosen", {})
+        if "floor" in chosen:
+            RECOG_FLOOR = float(chosen["floor"])
+        if "margin" in chosen:
+            RECOG_MARGIN = float(chosen["margin"])
+    except Exception:      # a bad calibration file must never break recognition
+        pass
+
+
+_load_calibration()
+
+
+# ── the embedder seam ────────────────────────────────────────────────────────
+# Recognition needs a sentence embedder exposing embed(list[str]) -> ndarray of
+# L2-normalised row vectors (so K @ v is cosine similarity). In the full AURA deployment
+# `brain` supplies it; that module is private and NOT shipped in this twin. Here we fall
+# back to embedder.py — the reference embedder in the `[live]` extra. The stdlib paths
+# (--prove, --selftest, mesh_grade level) never reach this, so the core stays dependency-free.
+_EMBEDDER = None
+
+
+def _embedder():
+    global _EMBEDDER
+    if _EMBEDDER is None:
+        try:
+            import brain as _e            # full AURA deployment (private, not in this repo)
+        except ImportError:
+            import embedder as _e         # public reference embedder (`pip install aura-pce[live]`)
+        _EMBEDDER = _e
+    return _EMBEDDER
 
 
 @dataclass
@@ -105,7 +154,7 @@ def _index(rows: list[dict], registry=None):
     """Names + embedded keys, cached PER REGISTRY; re-embeds only when that registry's keys
     change. Mirrors ds_need._index (same embedder, local + free — no budget)."""
     import numpy as np
-    import brain
+    emb = _embedder()
 
     cache = _cache_for(registry)
     keys = _keys(rows)
@@ -115,7 +164,7 @@ def _index(rows: list[dict], registry=None):
         if str(z["digest"]) == digest:
             return list(z["names"]), z["K"]
     names = [n for n, _ in keys]
-    K = brain.embed([k for _, k in keys])
+    K = np.asarray(emb.embed([k for _, k in keys]), dtype=float)
     np.savez(cache, names=np.array(names), K=K, digest=np.array(digest))
     return names, K
 
@@ -125,19 +174,19 @@ def logic_need(situation: str, defer_log: bool = True, registry=None) -> LogicNe
     sovereign registry to recognize against (None = the DS logic_registry.jsonl, unchanged);
     pass sysadmin_registry.jsonl to give the sysadmin PCE its own recognition lane."""
     import numpy as np
-    import brain
 
     rows = _axioms(registry)
     if not rows:
         return LogicNeed(False, "", 0.0, "", [], "", [])
     by_id = {r["id"]: r for r in rows}
     names, K = _index(rows, registry)
-    v = brain.embed([situation])[0]
+    v = np.asarray(_embedder().embed([situation])[0], dtype=float)
     scores = K @ v
     order = np.argsort(-scores)[:3]
     cands = [(str(names[i]), round(float(scores[i]), 3)) for i in order]
     top_name, top_score = cands[0]
-    if top_score >= THRESHOLD:
+    second = cands[1][1] if len(cands) > 1 else -1.0
+    if top_score >= RECOG_FLOOR and (top_score - second) >= RECOG_MARGIN:
         r = by_id[top_name]
         sphere = r.get("sphere")
         witness = (f"Rscript {R_PATTERNS_DIR / (top_name + '.R')}" if sphere == "R"
@@ -153,7 +202,9 @@ def logic_need(situation: str, defer_log: bool = True, registry=None) -> LogicNe
             review=r.get("review") or {"trust": "unreviewed"})
     if defer_log:
         rec = {"input": situation[:300], "stage": "logic_dispatch",
-               "candidates": cands, "reason": f"top score {top_score} < {THRESHOLD}",
+               "candidates": cands,
+               "reason": (f"top {top_score} < floor {RECOG_FLOOR}" if top_score < RECOG_FLOOR
+                          else f"margin {round(top_score - second, 3)} < {RECOG_MARGIN}"),
                "review_status": "pending",
                "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds")}
         with _queue_for(registry).open("a", encoding="utf-8") as f:
@@ -169,22 +220,20 @@ KNOWN_MISSES: dict = {}
 def selftest() -> int:
     """Known asks → expected top-1 axiom (or accept-set); prose must NOT fire. Prints
     the observed score gap so THRESHOLD stays measured, not asserted."""
+    # In-domain sysadmin asks → the axiom they should recognise (the SHIPPED sample registry).
     cases = [
-        ("is the difference between my two conversion rates statistically significant",
-         {"ab_test_proportions", "ab_test_srm_check", "permutation_test"}),
-        ("check my sample ratio mismatch in the experiment assignment",
-         {"ab_test_srm_check"}),
-        ("integrate this smooth function to high accuracy",
-         {"adaptive_simpson", "gauss_legendre_quadrature", "romberg_integration"}),
-        ("fit an accelerated failure time survival model",
-         {"accelerated_failure_time_lite", "weibull_aft_survival"}),
-        ("boost weak stumps into a strong classifier",
-         {"adaboost", "gradient_boosting_stumps", "gradient_boosting"}),
+        ("a writer crashed before the file rename completed", {"atomic_write_temp_rename"}),
+        ("a metric reading crossed the z-score anomaly threshold", {"zscore_anomaly"}),
+        ("free disk space dropped below the safety floor", {"disk_space_guard"}),
+        ("verify the restored backup matches the original checksum", {"backup_verify_checksum"}),
+        ("reclaim a stale lock whose owning process is dead", {"stale_lock_detect"}),
+        ("sustained memory pressure has exceeded the limit", {"memory_pressure"}),
     ]
     negatives = [
-        "restart the web server on the staging machine",
+        "integrate this smooth function to high accuracy",
         "draft the release announcement for the blog",
         "what is the weather forecast for tomorrow",
+        "recommend a good pizza topping for friday",
     ]
     if not REGISTRY.exists():
         print("✗ FAIL  sample_registry.jsonl missing — run make_sample_data.py first")
@@ -216,7 +265,7 @@ def selftest() -> int:
               f"{'defer (correct)' if good else f'FIRED {r.axiom_id} ({r.confidence})'}")
 
     # surface the axiom on a fired case — proving L4 returns the CONSTRAINT, not just a name
-    demo = logic_need("is my A/B conversion difference significant", defer_log=False)
+    demo = logic_need("verify the restored backup matches the original checksum", defer_log=False)
     axiom_surfaced = bool(demo.fired and demo.belief and demo.post_conditions)
     review_carried = bool(demo.fired and demo.review and demo.review.get("trust"))
     print(f"\n  {'✓' if axiom_surfaced else '✗'} surfaces a checkable axiom on fire:")
@@ -224,18 +273,20 @@ def selftest() -> int:
         print(f"      belief: {demo.belief[:120]}")
         print(f"      constraints: {[p['expr'] for p in demo.post_conditions][:3]}")
         print(f"      strength={demo.strength}  review-trust={demo.review.get('trust')}")
-    print(f"  {'✓' if review_carried else '✗'} carries an external-review trust tier")
+    print(f"  {'✓' if review_carried else '✗'} carries a review trust tier")
 
     gap_ok = (min(pos_scores) > max(neg_scores)) if pos_scores and neg_scores else False
+    inside = gap_ok and (max(neg_scores) < RECOG_FLOOR <= min(pos_scores))
     print(f"\n  score gap — weakest positive {min(pos_scores):.3f} vs "
           f"strongest negative {max(neg_scores):.3f}  "
-          f"({'clean gap, THRESHOLD sits inside' if gap_ok else 'OVERLAP — recalibrate'})")
+          f"(FLOOR={RECOG_FLOOR} MARGIN={RECOG_MARGIN}; "
+          f"{'clean gap, FLOOR sits inside' if inside else 'OVERLAP — run calibrate.py'})")
     total = len(cases) + len(negatives)
     passed = ok + neg_ok
     print(f"\n{passed}/{total} passed · {known} known-miss · {regressions} NEW regressions "
           f"· axiom-surfaced={axiom_surfaced} · review-carried={review_carried}")
     return (0 if regressions == 0 and neg_ok == len(negatives)
-            and axiom_surfaced and review_carried else 1)
+            and axiom_surfaced and review_carried and gap_ok else 1)
 
 
 def main():

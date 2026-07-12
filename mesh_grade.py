@@ -4,9 +4,9 @@
 The mesh PCE emits anomaly advice (mesh_bridge.py, sovereign ledger mesh-emits.jsonl).
 This closes the loop the honest way — machine proposes, HUMAN disposes:
 
-  - There is NO clean automatic ground truth for the z-anomaly emits (verified 2026-07-11:
-    the 192 induced stress-events are stale/all-.5 and their windows show no z-spike, so
-    auto-grading against them would fabricate a precision number — the fundraising sin).
+  - There is NO clean automatic ground truth for the z-anomaly emits: induced stress-event
+    logs generally don't line up with the z-spikes (stale timestamps, wrong node, no window
+    overlap), so auto-grading against them would fabricate a precision number — the cardinal sin.
   - So each emit is a PROPOSAL. A human (or a future OBJECTIVE signal) grades whether the
     flagged anomaly was REAL (a true machine event) or NOISE (a false positive).
   - The LEVEL is OUTCOME precision — P(emitted anomaly was real) = Beta(1+real, 1+noise) —
@@ -26,13 +26,12 @@ import json
 import sys
 from pathlib import Path
 
-import os
-
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import outcomes
+import paths
 
-DATA = Path(os.environ.get("AURA_PCE_HOME", HERE / "data"))
+DATA = paths.data_home()
 LEDGER = DATA / "mesh-emits.jsonl"
 
 
