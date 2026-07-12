@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.npz
+data/fires.jsonl
+data/i-care-fires.jsonl
+data/streams/
+.venv/
+.DS_Store
