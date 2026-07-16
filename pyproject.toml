@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aura-pce"
-version = "0.1.0"
+version = "0.2.0"
 description = "The I CARE self-test gate: an operational advisor that runs four self-tests before it speaks, and refuses to speak when it cannot verify itself."
 readme = "README.md"
 requires-python = ">=3.10"

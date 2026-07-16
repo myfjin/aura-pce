@@ -89,9 +89,13 @@ Two metrics, kept on separate axes and never conflated:
 
 ## The sample vs. the real knowledge
 
-This repository ships a small, hand-written **sample registry** (six sysadmin axioms) and a
+This repository ships a small **sample registry** of six sysadmin axioms and a
 **synthetic graded ledger** — enough to run every command above and watch the mechanism work.
-They are clearly labelled demonstration data.
+They are clearly labelled demonstration data. Each sample axiom has a runnable reference
+implementation in [`axioms/`](axioms/); `make_sample_data.py` re-proves every one by executing
+it (`python3 axioms/<id>.py`) and only then stamps `verified` — so the registry's "proven by
+run" is reproducible by anyone, not asserted. (See [CHANGELOG](CHANGELOG.md) — this replaced an
+earlier version that hardcoded `verified: true`.)
 
 They are **not** the AURA knowledge base. The full deployment recognises against sovereign
 registries of hundreds of machine-verified rules (verified by compiler or real execution, not

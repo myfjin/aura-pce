@@ -3,28 +3,59 @@
 
 This is NOT the AURA knowledge base. The real deployment recognises against sovereign
 registries of hundreds of machine-verified rules; those are the project's product and are
-not shipped here. What ships is a small, hand-written *sample* — enough that a stranger can
-run the self-test proof and the graded-precision report and watch the mechanism work.
+not shipped here. What ships is a small *sample* whose six axioms each have a runnable
+reference implementation in axioms/ — enough that a stranger can reproduce the self-test proof
+and the graded-precision report and watch the mechanism work.
 
-Everything below is synthetic and clearly labelled. Run: `python3 make_sample_data.py`.
+Everything below is synthetic and clearly labelled. Each axiom's `verified` flag is set by
+actually running its reference impl (see `_prove_by_run`), never hardcoded.
+Run: `python3 make_sample_data.py`.
 """
 from __future__ import annotations
 import json
+import subprocess
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
 import paths
 
 DATA = paths.data_home()
 DATA.mkdir(parents=True, exist_ok=True)
 
 
+def _prove_by_run(id_):
+    """Run this axiom's reference implementation (axioms/<id>.py) and report the REAL result.
+
+    This is what makes 'verified' honest: the flag is set by an actual execution a stranger
+    can reproduce (`python3 axioms/<id>.py`), never hardcoded. If the impl is missing or its
+    self-test fails, the axiom is marked NOT verified — no false 'proven by run' ships.
+    """
+    impl = ROOT / "axioms" / f"{id_}.py"
+    if not impl.exists():
+        return False, {"reference_impl": None, "note": "no reference implementation on disk"}
+    try:
+        r = subprocess.run([sys.executable, str(impl)], capture_output=True, text=True, timeout=30)
+    except Exception as e:  # pragma: no cover
+        return False, {"reference_impl": f"axioms/{id_}.py", "error": str(e)[:120]}
+    ok = r.returncode == 0
+    return ok, {
+        "reference_impl": f"axioms/{id_}.py",
+        "command": f"python3 axioms/{id_}.py",
+        "exit_code": r.returncode,
+        "self_test": (r.stdout or "").strip().splitlines()[-1:] and (r.stdout or "").strip().splitlines()[-1] or "",
+        "proven_by_run": ok,
+    }
+
+
 def axiom(id_, category, consumes, posts, core, strength):
     """consumes: list of (name, type, noun). posts: list of (expr, msg, tier)."""
+    verified, evidence = _prove_by_run(id_)
+    grade = "proven by run" if verified else "UNPROVEN (reference impl did not pass)"
     belief = (f"When it runs, {id_.replace('_', ' ')} guarantees "
               + "; ".join(p[1] for p in posts)
-              + f" ({strength}-grade: proven by run).")
+              + f" ({strength}-grade: {grade}).")
     return {
         "id": id_, "sphere": "SYS", "category": category,
         "signature": {
@@ -32,17 +63,18 @@ def axiom(id_, category, consumes, posts, core, strength):
             "produces": {"type": "", "names": [], "noun": "unknown"},
         },
         "post_conditions": [
-            {"expr": e, "msg": m, "tier": ti, "tag": "sample", "verified": True}
+            {"expr": e, "msg": m, "tier": ti, "tag": "sample", "verified": verified}
             for (e, m, ti) in posts
         ],
         "invariant_guards": [],
         "core_idea": f"{id_}: {core}",
-        "belief_sentence": {"text": belief, "status": "sample-demonstration-v1"},
+        "belief_sentence": {"text": belief, "status": "gate-run-sample-v2"},
         "type_nouns_raw": [no for (_, _, no) in consumes],
-        "verified_run": True,
+        "verified_run": verified,
         "strength": strength,
         "is_axiom": True,
-        "extraction": {"source": "sample-demonstration"},
+        "extraction": {"source": "reference-impl", "impl": f"axioms/{id_}.py"},
+        "evidence": evidence,
     }
 
 
