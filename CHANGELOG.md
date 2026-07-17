@@ -4,6 +4,13 @@ All notable changes to aura-pce.
 
 ## [0.2.0] — 2026-07-17
 
+### Packaging
+
+- The wheel now ships `axioms/` (the six reference implementations), so a pip install can
+  actually prove-by-run: `aura-pce init` executes each impl and stamps `verified_run` from the
+  real exit code. (0.2.0 was previously unreleasable — the version was bumped but the axioms
+  were not packaged, which would have stamped every sample UNPROVEN for pip users.)
+
 ### Fixed — the sample registry now earns its "verified", it no longer asserts it
 
 The initial release shipped a sample registry of six sysadmin axioms whose records

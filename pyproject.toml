@@ -56,4 +56,4 @@ py-modules = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["sources*"]
+include = ["sources*", "axioms*"]
