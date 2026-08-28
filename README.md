@@ -4,9 +4,11 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 
-> An operational advisor that **runs four self-tests before it speaks, and refuses to
-> speak when it cannot verify itself.** This repository is the open-mechanism half of
-> AURA's Pattern Composition Engine — the part you can install, run, read, and check today.
+> An operational advisor **for self-hosted infrastructure** — a Mastodon instance, a mail
+> server, a family cloud — run by someone with no SRE team. It **runs four falsifiable
+> self-tests before it speaks, and refuses to speak when it cannot verify itself.** This
+> repository is the open-mechanism half of AURA's Pattern Composition Engine — the part you
+> can install, run, read, and check today.
 
 Most monitors and AI copilots answer whether or not they had grounds, and their reliability
 is asserted by their vendors rather than measured in the open. This engine inverts that.
