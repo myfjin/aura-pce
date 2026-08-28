@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aura-pce"
-version = "0.2.0"
-description = "The I CARE self-test gate: an operational advisor that runs four self-tests before it speaks, and refuses to speak when it cannot verify itself."
+version = "0.2.1"
+description = "An operational advisor for self-hosted infrastructure that must prove what it says before it says it: four falsifiable self-tests before every emission, and structural silence when it cannot verify itself."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
