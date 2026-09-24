@@ -170,9 +170,16 @@ class PatternExtractor:
 
     def _greedy_cluster(self, components: List[Dict[str, Any]]) -> List[List[Dict[str, Any]]]:
         """Single-linkage: attach each component to the first cluster whose nearest member is
-        within the threshold, else start a new cluster. Deterministic, O(n^2), and no extra
-        dependency. Dense substrate at scale wants a real clustering algorithm — the ported
-        engine marks the same swap-in point — but that decision belongs with a measured need.
+        within the threshold, else start a new cluster. O(n^2), no extra dependency.
+
+        KNOWN PROPERTY, stated because it is easy to mistake for nondeterminism: "first cluster
+        wins" means the result depends on the ORDER components arrive in. The store preserves
+        insertion order, so the result is deterministic for a given corpus — two runs over the
+        same components give the same clusters and the same pattern ids. A different order can
+        cluster differently, which is single-linkage behaving normally, not a bug.
+
+        Dense substrate at scale wants a real clustering algorithm; the ported engine marks the
+        same swap-in point. That decision belongs with a measured need, not with a preference.
         """
         clusters: List[List[Dict[str, Any]]] = []
         for c in components:
