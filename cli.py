@@ -56,7 +56,7 @@ def cmd_selftest(args) -> int:
         results.append((mod_name, 0 if rc is None else rc))
 
     # stdlib suites — always runnable
-    for m in ("ontology", "i_care", "mesh_grade", "mesh_bridge", "decompose", "store"):
+    for m in ("ontology", "i_care", "mesh_grade", "mesh_bridge", "decompose", "store", "extract"):
         run(m)
 
     # embedder-backed suites — only if a live backend is installed
