@@ -151,6 +151,55 @@ See [docs/CALIBRATION.md](docs/CALIBRATION.md) for the method and the measured n
 More: [docs/QUICKSTART.md](docs/QUICKSTART.md) · [docs/API.md](docs/API.md) ·
 [docs/CALIBRATION.md](docs/CALIBRATION.md).
 
+## How we hold ourselves to this
+
+The project is built on one rule: **a claim must not outrun its evidence.** It applies to us first.
+
+In September 2026 we re-derived the evidence behind our own knowledge base rather than trusting it.
+Of the **200 system-administration rules** the advisor draws on:
+
+| how the claim is actually backed | rules |
+|---|---|
+| an **independent oracle** — a cross-language twin, or a chaos/metamorphic probe | **14** |
+| **cross-language agreement only** (a soft tier: agreement is not correctness) | **54** |
+| a **green run only** — the pattern's own self-test passes, and nothing independent | **132** |
+
+The previous registry called all **200** verified. It was not lying: each one really does pass its own
+self-test, and we re-ran every one of them to confirm it — **200/200 exit 0**, plus a runtime evidence
+card on each (success, adversary, fuzz) — **200/200 VERIFIED**. But a green run is not the same as
+being right, and **132 of them had nothing beyond it.**
+
+So we demoted those 132: `is_axiom: false`, `basis: "green-run-candidate"` — and we kept the old claim
+beside the new one (`prior_is_axiom: true`) rather than deleting it, because a correction should be
+readable as a correction.
+
+Three things followed, and they are why this is in the README rather than in a changelog:
+
+1. **Nothing unverified is called verified anywhere now.** Every rule carries its `basis`, the oracle
+   kinds behind it, and the exit code of the run behind it. A rule that has only a green run says so —
+   and the advisor still emits on it, **labelled `green-run-candidate` and advisory**, because
+   silencing advice that carries a real constraint is the other failure mode, not a safer one.
+2. **The number went the wrong way, and we published it anyway.** 200 verified became 68 backed and
+   132 candidates. A registry number that only ever rises is marketing; this one fell because the
+   question changed from *"does it run?"* to *"is it right?"*
+3. **The measurement itself got sharper.** Every emission now records what its advice stood on, so
+   reliability is reported **per tier with its own `n`** — oracle-backed advice and green-run-only
+   advice are different claims and are no longer blended into one figure.
+
+### What is public here, and what is not
+
+Being precise matters more than sounding good:
+
+- **Public in this repository:** the mechanism — the self-test gate, the refusals, the sample registry
+  proven by real execution, and the tool that polices our claims (`pip install whypass`).
+- **Not public:** the knowledge base itself. The 200 rules, their evidence records, and the pass that
+  graded them are ours, and that is the part we sell.
+
+So the sentence above is deliberately *"we demoted 132 of our own rules, and here is the count"* —
+checkable against what we publish — rather than *"the code that did it is in this repository"*, which
+would have been false on the day it was written. A README that overstates by one clause is the defect
+this project exists to catch.
+
 ## About
 
 Part of **AURA**, a research program in self-testing infrastructure by Reality Optimizer —
