@@ -169,6 +169,11 @@ class JsonlStore:
         self._vectors: Dict[str, Dict[str, List[float]]] = {
             COLL_COMPONENTS: {}, COLL_PATTERNS: {}, COLL_DECISIONS: {},
         }
+        # ONE VECTORIZER PER COLLECTION (fixed 2026-09-24). A single shared self._vec used to be
+        # overwritten on each loop iteration, so every query was weighted by the LAST collection s
+        # idf while the stored documents were weighted by their own — a quiet mismatch that no
+        # outcome-level test caught, because shared words still matched. Caught by 4Q.
+        self._vecs: Dict[str, LexicalVectorizer] = {}
         for coll in self._docs:
             self._load(coll)
         self._refit()
@@ -201,7 +206,7 @@ class JsonlStore:
             docs = list(self._docs[coll].values())
             vec = LexicalVectorizer().fit(d.get("text", "") for d in docs)
             self._vectors[coll] = {d["id"]: vec.vector(d.get("text", "")) for d in docs}
-            self._vec = vec                     # query vectors use the same fitted idf
+            self._vecs[coll] = vec              # queries for THIS collection use THIS idf
 
     # ── counts ──────────────────────────────────────────────────────────────
 
@@ -268,7 +273,7 @@ class JsonlStore:
                where: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if not query or not query.strip() or not self._docs[coll]:
             return []
-        qv = self._vec.vector(query)
+        qv = self._vecs[coll].vector(query)     # this collection s idf, never another s
         scored = []
         for rec in self._docs[coll].values():
             if not _matches(rec.get("metadata") or {}, where):
@@ -334,6 +339,27 @@ def selftest() -> int:
         check("a metadata filter is applied",
               all(h["metadata"].get("type") == "action"
                   for h in s.query_components("restart the daemon", top_k=5, where={"type": "action"})),
+              True)
+
+        # THE TEST THAT WOULD HAVE CAUGHT 4Q s BUG — and note what it took to get here. My first
+        # attempt asserted that adding an unrelated pattern left the component scores unchanged.
+        # That test stays GREEN under the bug: the query idf is always the same WRONG one, so the
+        # scores do not move; they are simply wrong from the start. It was decoration, and running
+        # it against a re-introduced bug is the only reason I know that.
+        #
+        # This one recomputes the expected weighting from scratch, using only the components
+        # corpus, and demands the store agree. A query weighted by another collection s idf gives
+        # a different number. So does a query weighted by no corpus at all.
+        corpus = [c.source_text_excerpt or "(empty)" for c in comps]
+        _v = LexicalVectorizer().fit(corpus)
+        q = "fan curve reading"
+        expected = max(cosine(_v.vector(q), _v.vector(d)) for d in corpus)
+        got = s.query_components(q, top_k=1)[0]["similarity"]
+        check("a query is weighted by the corpus it searches (independent recomputation)",
+              round(got, 6), round(expected, 6))
+        check("each collection keeps its own vectorizer (idf from its own corpus)",
+              [s._vecs[c].n_docs for c in (COLL_COMPONENTS, COLL_PATTERNS, COLL_DECISIONS)]
+              == [s.get_counts()[c] for c in (COLL_COMPONENTS, COLL_PATTERNS, COLL_DECISIONS)],
               True)
 
         p = Pattern(id="p1", name="thermal drift", hypothesis="rising temperature precedes fan failure")
