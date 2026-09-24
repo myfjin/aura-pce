@@ -7,7 +7,7 @@
 > An operational advisor **for self-hosted infrastructure** — a Mastodon instance, a mail
 > server, a family cloud — run by someone with no SRE team. It **runs four falsifiable
 > self-tests before it speaks, and refuses to speak when it cannot verify itself.** This
-> repository is the open-mechanism half of AURA's Pattern Composition Engine — the part you
+> repository is the open-mechanism half of AURA's **Pattern Composition Engine (PCE)** — the part you
 > can install, run, read, and check today.
 
 Most monitors and AI copilots answer whether or not they had grounds, and their reliability
@@ -202,6 +202,18 @@ this project exists to catch.
 
 ## About
 
+**`aura-pce` is the public half of AURA's Pattern Composition Engine (PCE)** — the engine whose job is
+to compose a decision out of a recognised operational pattern, a verified rule and a type fit, and to
+**refuse to speak when it cannot**. That refusal is the part that makes the rest trustworthy, so it is
+the part that ships first.
+
+**What is in this repository today** is the half that makes refusal possible: the four-question
+`I CARE` self-test gate, the type ontology the rules are written against, a hand-written sample rule
+registry proven by real execution, and the sysadmin telemetry bridge. **The composition half — the
+decomposer, the store, the pattern extractor and the composer itself — is in progress and will be
+published here as it lands**, mechanism only, with the same discipline: a green run says what it is,
+and nothing is called verified that has not been independently checked.
+
 Part of **AURA**, a research program in self-testing infrastructure by Reality Optimizer —
 [realityoptimizer.app](https://realityoptimizer.app). Sibling open tools:
 [folder-nature](https://pypi.org/project/folder-nature/) (semantic identity + signing for file
@@ -214,4 +226,4 @@ than believed.
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE).
+Apache-2.0 from the first release. See [LICENSE](LICENSE).
