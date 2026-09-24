@@ -129,6 +129,12 @@ def _split_sentences(text: str) -> List[str]:
 
     Splits on . ! ? followed by whitespace and a capital, so it does not break inside
     numbers (3.14) or version-like tokens (v1.2.3).
+
+    Known limit, deliberately left in place: an abbreviation ends a "sentence", so
+    "Use e.g. this pattern" splits into "Use e.g." and "this pattern" — both too short to
+    yield a component. A real fix (an abbreviation table, or proper boundary detection) would
+    be an improvement over the engine this was ported from, which is the opposite of what a
+    faithful port is for. If it is fixed, it should be fixed in both.
     """
     parts = re.split(r"(?<=[.!?])\s+(?=[A-Z\[])", text)
     return [p.strip() for p in parts if p.strip()]
@@ -252,9 +258,27 @@ class Decomposer:
             matched = next((mk for mk in _DECISION_MARKERS if mk in lower), None)
             if not matched:
                 continue
-            choice = sent[lower.index(matched) + len(matched):].strip(" ,.:;")[:200]
-            out.append(self._make("decision", {"choice": choice, "marker": matched, "rationale": sent},
-                                  sent, session_id, source_role, source_channel))
+            # The choice is the text after the marker. Deliberately NOT split on a period:
+            # that breaks identifiers like v1.2.3, and the sentence is already one bounded
+            # unit from _split_sentences.
+            idx = lower.find(matched)
+            after = sent[idx + len(matched):].strip(" ,.:;")
+            choice = after.strip()[:200]
+            # Separate the WHAT from the WHY. A causal marker turns the tail into `rationale`
+            # and is trimmed out of `choice`, so the two fields never overlap and a reader can
+            # see which part of the sentence was the decision and which was the reason for it.
+            rationale = ""
+            for r_marker in (" because ", " since ", " per ", " — ", " - "):
+                if r_marker in lower:
+                    r_idx = lower.find(r_marker)
+                    rationale = sent[r_idx + len(r_marker):].strip()[:200]
+                    choice_lower = choice.lower()
+                    if r_marker in choice_lower:
+                        choice = choice[:choice_lower.find(r_marker)].strip()[:200]
+                    break
+            content = {"choice": choice, "marker": matched.strip(), "rationale": rationale}
+            out.append(self._make("decision", content, sent,
+                                  session_id, source_role, source_channel))
         return out
 
 
@@ -309,6 +333,24 @@ def selftest() -> int:
     dec = [x for x in c if x.type == "decision"]
     check("decision records marker + choice, once per sentence",
           (len(dec), dec[0].content["marker"]) if dec else None, (2, "decided to"))
+
+    # The rationale split (caught by the independent verifier, not by me): the WHAT and the
+    # WHY are separated, and the marker is trimmed out of the choice so they never overlap.
+    c = d.decompose("Decided to patch the service because the log shows a leak.")
+    dec = [x for x in c if x.type == "decision"]
+    check("decision separates what was decided from why",
+          (dec[0].content["choice"], dec[0].content["rationale"]) if dec else None,
+          ("patch the service", "the log shows a leak."))
+    c = d.decompose("We chose to keep the old schema.")
+    dec = [x for x in c if x.type == "decision"]
+    check("no causal marker means an empty rationale, not a guessed one",
+          (dec[0].content["choice"], dec[0].content["rationale"]) if dec else None,
+          ("keep the old schema", ""))   # the trailing period is stripped, as canonical does
+    c = d.decompose("Decided to raise the timeout since the queue kept stalling.")
+    dec = [x for x in c if x.type == "decision"]
+    check("since works as a rationale marker too",
+          (dec[0].content["choice"], dec[0].content["rationale"]) if dec else None,
+          ("raise the timeout", "the queue kept stalling."))
 
     # --- the negative cases: these are the can-fail witnesses ---
     check("empty text yields nothing", d.decompose(""), [])
