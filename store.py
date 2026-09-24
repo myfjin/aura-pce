@@ -139,6 +139,8 @@ class Store(Protocol):
     def add_decisions(self, decisions: Sequence[ReasoningComponent],
                       _from_components: bool = False) -> int: ...
     def add_patterns(self, patterns: Sequence[Pattern]) -> int: ...
+    def iter_all(self, coll: str, with_vectors: bool = False,
+                 where: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]: ...
     def query_components(self, query: str, top_k: int = 5,
                          where: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]: ...
     def query_patterns(self, query: str, top_k: int = 3,
@@ -284,6 +286,21 @@ class JsonlStore:
         return [{"id": rec["id"], "text": rec["text"], "distance": round(1.0 - sim, 6),
                  "similarity": round(sim, 6), "metadata": rec.get("metadata") or {}}
                 for sim, rec in scored[:top_k]]
+
+    def iter_all(self, coll: str, with_vectors: bool = False,
+                 where: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """Every record in a collection, optionally with its vector. This is what the pattern
+        extractor needs, and it is public on purpose: the engine we ported from reached into a
+        private collection attribute, which is not something a Protocol can require of a backend."""
+        out = []
+        for rec in self._docs.get(coll, {}).values():
+            if not _matches(rec.get("metadata") or {}, where):
+                continue
+            item = {"id": rec["id"], "text": rec["text"], "metadata": rec.get("metadata") or {}}
+            if with_vectors:
+                item["vector"] = self._vectors[coll].get(rec["id"], [])
+            out.append(item)
+        return out
 
     def query_components(self, query: str, top_k: int = 5,
                          where: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
