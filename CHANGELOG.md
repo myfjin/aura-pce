@@ -2,6 +2,29 @@
 
 All notable changes to aura-pce.
 
+## [0.3.1] — 2026-09-28
+
+### Fixed — 0.3.0 shipped without the composing path, and is yanked
+
+**0.3.0 announced the composing path and contained none of it.** `decompose`, `store`, `extract` and
+`compose` were added to the repository and never added to `[tool.setuptools] py-modules`, so both the
+wheel and the sdist omitted them. A clean install from PyPI gave:
+
+    compose MISSING · store MISSING · extract MISSING · decompose MISSING · i_care ok
+
+**Nothing caught it because every test ran from the checkout**, where the files are on disk whether or
+not they are packaged. Eight green suites were measuring the repository, not the artifact — on the one
+surface where a mistake is permanent.
+
+- `py-modules` now lists all 17 modules.
+- New CI job **`packaging (the claim ships)`**, running `packaging_check.py`: every declared module
+  must be **inside both artifacts**, and every module must **import from an installed wheel with the
+  process started in a neutral directory**.
+- Both checks were made to fail before being trusted: the gate reports RED against a copy reverted to
+  the 0.3.0 configuration.
+
+The lesson is in the script and in the commit: **a check must measure the thing that ships.**
+
 ## [0.3.0] — 2026-09-28
 
 ### Added — the composing path
