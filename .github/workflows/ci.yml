@@ -59,3 +59,27 @@ jobs:
         run: python -c "import sources; raise SystemExit(sources.selftest())"
       - name: Watch real /proc telemetry for a few samples (must not error)
         run: aura-pce watch --source proc --iterations 3 --interval 0.2
+
+  # ---------------------------------------------------------------------------
+  # The packaging gate. 0.3.0 was published with the composing path missing from BOTH artifacts,
+  # because new modules were added to the repo and not to py-modules — and no existing test could
+  # see it, since the suite runs from the checkout where the files are on disk either way.
+  #
+  # So this job checks the thing that actually ships: it asserts both artifacts CONTAIN every
+  # module, installs the wheel into a clean environment, and imports the modules from a NEUTRAL
+  # directory — because importing from the repo proves nothing about what was packaged.
+  # ---------------------------------------------------------------------------
+  packaging:
+    name: packaging (the claim ships)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Build both artifacts
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+      - name: The artifacts contain every declared module, and it imports from a neutral cwd
+        run: python packaging_check.py
