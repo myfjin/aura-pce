@@ -2,7 +2,7 @@
 
 All notable changes to aura-pce.
 
-## [0.3.0] — unreleased (in review)
+## [0.3.0] — 2026-09-28
 
 ### Added — the composing path
 
