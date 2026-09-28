@@ -14,8 +14,10 @@ directory, plus lexical retrieval computed here. That is deliberate: a stranger 
 package, run the whole path, and read every line that produced an answer, with no dependency,
 no model and no network.
 
-``ChromaStore`` (separate module, optional extra) is the production backend: a real vector store
-with real embeddings. It is never imported by the core, so importing this module costs nothing.
+A **vector backend is not shipped**. Retrieval here is lexical, and the seam where a semantic one
+belongs is ``embedder.py`` (the `[live]` extra), which already resolves an embedding function. A
+future backend builds on that seam; until one exists, this module does not name one, because naming
+a module that is not in the package is a claim outrunning its record.
 
 ## What "lexical" means here, and what it does not
 
@@ -148,10 +150,22 @@ class Store(Protocol):
 
 
 def _matches(metadata: Dict[str, Any], where: Optional[Dict[str, Any]]) -> bool:
-    """The subset of filtering this store supports: equality on top-level metadata fields."""
+    """Filtering for this store: equality on top-level metadata fields, plus ``{"$in": [...]}``.
+
+    ``$in`` is supported because the composer builds a multi-role filter with it, and a backend
+    that silently ignored the operator would return everything while looking like it filtered —
+    which is worse than returning nothing.
+    """
     if not where:
         return True
-    return all(metadata.get(k) == v for k, v in where.items())
+    for k, v in where.items():
+        got = metadata.get(k)
+        if isinstance(v, dict):
+            if "$in" in v and got not in v["$in"]:
+                return False
+        elif got != v:
+            return False
+    return True
 
 
 class JsonlStore:
