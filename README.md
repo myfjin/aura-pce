@@ -105,6 +105,43 @@ by opinion), and earns its reliability number on live infrastructure. That knowl
 earned number are the project's product; they are not in this repository. What is here is the
 honest machinery, open for anyone to audit.
 
+## The composing path
+
+Four modules, no dependencies, no model, no network — each gated by `aura-pce selftest`:
+
+| module | what it does |
+|---|---|
+| `decompose` | text → five kinds of reasoning component: observation, comparison, hypothesis, action, decision |
+| `store` | three collections (components, patterns, decisions) behind a `Store` protocol, with a stdlib reference store |
+| `extract` | clusters components into patterns — greedy single-linkage, time-decay weighted, stable ids |
+| `compose` | fuses components + patterns + current state into one block, **or returns nothing** |
+
+```
+from decompose import Decomposer
+from store import JsonlStore
+from extract import PatternExtractor
+from compose import PatternComposer
+
+s = JsonlStore("./my-components")
+s.add_components(Decomposer().decompose(open("notes.txt").read()))
+PatternExtractor(s).extract(persist=True)          # patterns, if the wording repeats
+block = PatternComposer(s).compose("what did we do about the noisy fan?")
+print(block.to_markdown()) if block else print("nothing worth saying")
+```
+
+### What it will not do — read this before trusting a block
+
+- **Retrieval is lexical, and says so.** It groups **shared words**, not shared meaning:
+  near-identical wording scores ≈0.706, the same meaning in different words ≈0.084, and that miss is
+  asserted as a test. It finds patterns in a log or a repeated alert, and **nothing** in prose that
+  varies. Silence is the failure mode, never a confident block built on nothing.
+- **`compose` gates every signal separately.** A signal below its own floor is excluded rather than
+  carried by the others, so a block is never spoken as though each part were adequate when it is not.
+  If nothing clears, you get `None` — and the returned block names which signals were used and which
+  fell below the floor.
+- **You bring your own state.** The third signal is a snapshot you supply; with none, composition
+  proceeds on two signals. Nothing here assumes your topology or your metric names.
+
 ## Live recognition & the embedder
 
 Recognition matches a free-text situation to an axiom by embedding. In the full deployment a
@@ -207,12 +244,14 @@ to compose a decision out of a recognised operational pattern, a verified rule a
 **refuse to speak when it cannot**. That refusal is the part that makes the rest trustworthy, so it is
 the part that ships first.
 
-**What is in this repository today** is the half that makes refusal possible: the four-question
-`I CARE` self-test gate, the type ontology the rules are written against, a hand-written sample rule
-registry proven by real execution, and the sysadmin telemetry bridge. **The composition half — the
-decomposer, the store, the pattern extractor and the composer itself — is in progress and will be
-published here as it lands**, mechanism only, with the same discipline: a green run says what it is,
-and nothing is called verified that has not been independently checked.
+**What is in this repository** is the half that makes refusal possible — the four-question `I CARE`
+self-test gate, the type ontology the rules are written against, a hand-written sample rule registry
+proven by real execution, and the sysadmin telemetry bridge — **and now the composing path itself**:
+`decompose` turns text into structured reasoning components, `store` keeps them and finds them again,
+`extract` clusters them into patterns, and `compose` fuses components, patterns and current state into
+one block or returns nothing. Mechanism only, with the same discipline: a green run says what it is,
+nothing is called verified that has not been independently checked, and a self-test that cannot fail
+is not a self-test.
 
 Part of **AURA**, a research program in self-testing infrastructure by Reality Optimizer —
 [realityoptimizer.app](https://realityoptimizer.app). Sibling open tools:
