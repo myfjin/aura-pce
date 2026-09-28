@@ -49,10 +49,18 @@ aura-pce = "cli:main"
 # Flat layout: the modules live at the repo root so `python3 i_care.py --prove` (cited by the
 # site and the docs) keeps working unchanged, while `pip install aura-pce` installs the same
 # files. Sample/live data is NOT packaged — `aura-pce init` writes it into the data home.
+# EVERY module in the package belongs in this list. 0.3.0 shipped WITHOUT the composing path
+# because four new modules were added to the repo and never added here — the wheel and the sdist
+# both omitted them, and CI could not see it because the suite runs from the checkout, where the
+# files exist regardless of packaging. A version that announces a feature it does not ship is the
+# exact defect this project exists to catch, and it was published. The gate is now in CI
+# (the `packaging` job): build both artifacts, assert the modules are inside, install the wheel
+# into a clean environment and import them from a NEUTRAL directory.
 py-modules = [
     "i_care", "logic_lane", "ontology", "mesh_bridge", "mesh_grade",
     "outcomes", "wisdom", "assert_linter", "make_sample_data",
     "embedder", "calibrate", "cli", "paths",
+    "decompose", "store", "extract", "compose",
 ]
 
 [tool.setuptools.packages.find]
