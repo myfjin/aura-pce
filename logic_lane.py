@@ -236,7 +236,7 @@ def selftest() -> int:
         "recommend a good pizza topping for friday",
     ]
     if not REGISTRY.exists():
-        print("✗ FAIL  sample_registry.jsonl missing — run make_sample_data.py first")
+        print("✗ FAIL  sample_registry.jsonl missing — run `aura-pce init` first")
         return 1
 
     ok, known, regressions = 0, 0, 0
