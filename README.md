@@ -69,6 +69,47 @@ aura-pce list                          # gated emits awaiting a human grade
 aura-pce grade <hash> real|noise       # dispose each one; the precision earns its n
 ```
 
+## For reviewers — reproduce the audit in two minutes
+
+Four commands from a cold machine. Expected output is quoted so you can match against it,
+not take our word.
+
+```bash
+pip install aura-pce       # pure stdlib — nothing else is downloaded
+aura-pce prove             # the provenance proof
+aura-pce init              # seeds the sample registry + demo ledger
+aura-pce selftest          # every self-test this install can run
+```
+
+**`aura-pce prove`** finishes with:
+
+> ```
+> ALL GREEN
+> validity LEVEL (measured, not asserted): unproven [n=0] — no graded I-CARE emissions yet
+> ```
+
+`unproven [n=0]` is the honest number on a fresh install — nothing has been graded here yet.
+There is no code path that prints a placeholder percentage.
+
+**`aura-pce selftest`** (after `init`) finishes with ten green suites and `ALL GREEN`. Nine
+run on the standard library alone; `embedder` additionally runs if a sentence embedder is
+available (the `[live]` extra installs one).
+
+**If you skip `init`** and run `selftest` first, `logic_lane` fails with:
+
+> ```
+> ✗ FAIL  sample_registry.jsonl missing — run `aura-pce init` first
+> ✗ 1 suite(s) FAILED: logic_lane
+> ```
+
+Exit code is **1**. The gate catching missing data is the gate working.
+
+The same discipline catches the project's own regressions and overclaims — a packaging bug in
+0.3.0 is in [CHANGELOG](CHANGELOG.md); an earlier overclaim about hard-coded `verified: true`
+is in 0.2.0; a 200→68 downgrade of our own knowledge base is in
+[§ How we hold ourselves to this](#how-we-hold-ourselves-to-this). A README that overstates
+by one clause is the defect this project exists to catch.
+
 ## What this is, and is not
 
 - **It is** the mechanism, and the mechanism is provably honest: the self-tests pass an
