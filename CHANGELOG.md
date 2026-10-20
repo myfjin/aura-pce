@@ -2,6 +2,21 @@
 
 All notable changes to aura-pce.
 
+## [0.3.2] — 2026-10-20
+
+### Fixed — the CLI hint names the public command, not the implementation
+
+A reviewer who ran `pip install aura-pce && aura-pce selftest` without first running
+`aura-pce init` saw `logic_lane` FAIL with:
+
+    ✗ FAIL  sample_registry.jsonl missing — run make_sample_data.py first
+
+`make_sample_data.py` is the internal script. The public command the user actually has is
+`aura-pce init`. Hint changed to name it. Exit code (1) unchanged; the measurement unchanged;
+only the string a reviewer reads when they skip a setup step.
+
+Found by running the project's own reviewer-replica flow against the published 0.3.1 wheel.
+
 ## [0.3.1] — 2026-09-28
 
 ### Fixed — 0.3.0 shipped without the composing path, and is yanked
