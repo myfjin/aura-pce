@@ -2,6 +2,17 @@
 
 All notable changes to aura-pce.
 
+## [0.3.3] — 2026-10-20
+
+### Documentation only — no code change
+
+Carries the new `For reviewers — reproduce the audit in two minutes` README section into the
+PyPI long-description. Four commands, each with the key expected-output lines quoted so a
+reader matches against the real run instead of against our prose.
+
+The wheel and sdist for 0.3.3 are byte-identical to 0.3.2 except for the embedded README. CI
+runs the same gates; the packaging check verifies all 17 modules still ship.
+
 ## [0.3.2] — 2026-10-20
 
 ### Fixed — the CLI hint names the public command, not the implementation
