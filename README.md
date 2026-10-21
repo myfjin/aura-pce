@@ -207,6 +207,34 @@ aura-pce calibrate                     # + write calibration.json into the data 
 
 See [docs/CALIBRATION.md](docs/CALIBRATION.md) for the method and the measured numbers.
 
+## Evidence per emit
+
+A graded `real`/`noise` is only honest if the grader has evidence. The `watch` command
+writes an emit line and moves on; the operator sitting down the next day cannot grade
+from memory without inventing certainty they do not have.
+
+`aura-pce evidence watch` tails the mesh ledger. The moment a new emit appears it
+captures a bundle keyed by `emit_hash`:
+
+```
+~/.local/share/aura-pce/evidence/<emit_hash>.json
+```
+
+Each bundle records what the box looked like at that instant — loadavg, `/proc/meminfo`,
+top-N processes by RSS and recent CPU ticks, the last two hundred `journalctl` lines,
+the user's crontab, and the systemd units currently running. Collectors are isolated:
+a missing `journalctl` records an error in the bundle, never crashes the watcher.
+
+Reproducible:
+
+```
+aura-pce evidence prove       # synthetic emit → capture → verify, in a temp dir
+aura-pce evidence selftest    # per-collector tests, failure containment, round-trip
+```
+
+Nothing is uploaded. The bundles live only on the operator's own disk; the mechanism
+(watcher, schema, five collectors) is public, the captured bundles are not.
+
 ## Layout
 
 | File | Role |
@@ -222,6 +250,7 @@ See [docs/CALIBRATION.md](docs/CALIBRATION.md) for the method and the measured n
 | `outcomes.py` | the Beta earned-frequency estimator (unproven at n=0) |
 | `wisdom.py` | the append-only fire log the gate writes to |
 | `assert_linter.py` | classifies assertions by strength; proves the self-tests real |
+| `evidence.py` | attach evidence to each emit so grading comes from evidence, not memory |
 | `cli.py` | the `aura-pce` console entry point |
 | `paths.py` | resolves the one data home (env → clone `./data` → user data dir) |
 | `make_sample_data.py` | generates the demonstration registry + ledger |
@@ -269,9 +298,11 @@ Three things followed, and they are why this is in the README rather than in a c
 Being precise matters more than sounding good:
 
 - **Public in this repository:** the mechanism — the self-test gate, the refusals, the sample registry
-  proven by real execution, and the tool that polices our claims (`pip install whypass`).
-- **Not public:** the knowledge base itself. The 200 rules, their evidence records, and the pass that
-  graded them are ours, and that is the part we sell.
+  proven by real execution, the evidence-capture watcher (`aura-pce evidence`), and the tool that
+  polices our claims (`pip install whypass`).
+- **Not public:** the knowledge base itself (the 200 rules, their evidence records, and the pass that
+  graded them), and *the evidence bundles your watcher captures on your own box* — those live on
+  your disk and are never uploaded. The mechanism ships; your data stays yours.
 
 So the sentence above is deliberately *"we demoted 132 of our own rules, and here is the count"* —
 checkable against what we publish — rather than *"the code that did it is in this repository"*, which

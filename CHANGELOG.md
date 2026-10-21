@@ -2,6 +2,38 @@
 
 All notable changes to aura-pce.
 
+## [0.4.0] — 2026-10-21
+
+### Added — `aura-pce evidence` — attach evidence to each emit so grading comes from evidence, not memory
+
+A grading decision made from fading memory is a guess with a label on it. The mesh ledger
+records what fired, but not what the box looked like when it fired — so when the operator
+sits down the next day to call each emit `real` or `noise`, they are reconstructing from
+feel, not evidence. This release ships the mechanism that captures the evidence at the
+moment of the fire, keyed by `emit_hash`.
+
+Four new subcommands:
+
+    aura-pce evidence watch [--once]   # tail the mesh ledger, capture a bundle per new emit
+    aura-pce evidence show <hash>      # print the captured bundle for one emit
+    aura-pce evidence prove            # synthetic emit → capture → verify, in a temp dir
+    aura-pce evidence selftest         # unit tests, stdlib-only
+
+Each bundle lives at `~/.local/share/aura-pce/evidence/<emit_hash>.json` and records the
+snapshot (`loadavg`, `meminfo`, top-N by RSS and recent CPU ticks), events
+(`journalctl` tail), and config (user crontab, running systemd services on user and
+system busses). Collectors are isolated: a failing collector records an error in the
+bundle, never crashes the watcher. No network calls. Dedup is content-based — if the
+bundle for a hash already exists, the watcher skips it, making restart a no-op.
+
+Doctrine: `aura-pce evidence prove` is a reproducible proof-by-run matching the shape
+of `aura-pce prove`. A reviewer who installed 0.4.0 clean runs it and sees `PROVE: PASS`
+on their own machine. Nothing is cited that was not just measured.
+
+Mechanism/data boundary: the watcher, the schema, and the five collectors are public —
+same Apache-2.0 as the rest of aura-pce. The *captured bundles themselves* are per-
+deployment data that lives only on the operator's own disk; nothing is uploaded.
+
 ## [0.3.3] — 2026-10-20
 
 ### Documentation only — no code change

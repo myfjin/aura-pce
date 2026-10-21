@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aura-pce"
-version = "0.3.3"
+version = "0.4.0"
 description = "The public half of AURA's Pattern Composition Engine (PCE): an operational advisor for self-hosted infrastructure that must prove what it says before it says it — four falsifiable self-tests before every emission, and structural silence when it cannot verify itself."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -61,6 +61,7 @@ py-modules = [
     "outcomes", "wisdom", "assert_linter", "make_sample_data",
     "embedder", "calibrate", "cli", "paths",
     "decompose", "store", "extract", "compose",
+    "evidence",
 ]
 
 [tool.setuptools.packages.find]
