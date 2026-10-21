@@ -491,6 +491,32 @@ def cmd_selftest(args: argparse.Namespace) -> int:
         else:
             print("  ✓ write + read round-trip")
 
+    # (5) every advertised CLI shape parses — catches surface drift between
+    # --help text, docs, and the actual argparse schema (bug caught 2026-10-21:
+    # `watch --follow` was advertised but not accepted).
+    try:
+        parser = argparse.ArgumentParser()
+        register(parser.add_subparsers(dest="cmd", required=True))
+        shapes = [
+            ["evidence", "watch", "--follow"],
+            ["evidence", "watch", "--once"],
+            ["evidence", "watch"],
+            ["evidence", "show", "abc123"],
+            ["evidence", "prove"],
+            ["evidence", "selftest"],
+        ]
+        for argv in shapes:
+            try:
+                parser.parse_args(argv)
+            except SystemExit:
+                print(f"  ✗ CLI shape rejected: {' '.join(argv)}")
+                fails += 1
+        if fails == 0:
+            print(f"  ✓ {len(shapes)} advertised CLI shapes all parse")
+    except Exception as e:
+        print(f"  ✗ CLI shape test crashed: {type(e).__name__}: {e}")
+        fails += 1
+
     if fails == 0:
         print("\nALL GREEN")
         return 0
@@ -507,7 +533,8 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     pw = ssub.add_parser("watch", help="tail the ledger and capture evidence per new emit")
     pw.add_argument("--ledger", help="override ledger path (default: data_home/mesh-emits.jsonl)")
     pw.add_argument("--evidence-dir", help="override evidence output dir")
-    pw.add_argument("--once", action="store_true", help="single pass then exit (otherwise follow forever)")
+    pw.add_argument("--follow", action="store_true", help="tail the ledger forever (this is the default)")
+    pw.add_argument("--once", action="store_true", help="single pass then exit")
     pw.set_defaults(fn=cmd_watch)
 
     ps = ssub.add_parser("show", help="print the evidence bundle for one emit")
@@ -528,7 +555,7 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="evidence", description=__doc__.splitlines()[0])
     sub = p.add_subparsers(dest="cmd", required=True)
     # mirror register() but without the outer "evidence" wrapper
-    pw = sub.add_parser("watch"); pw.add_argument("--ledger"); pw.add_argument("--evidence-dir"); pw.add_argument("--once", action="store_true"); pw.set_defaults(fn=cmd_watch)
+    pw = sub.add_parser("watch"); pw.add_argument("--ledger"); pw.add_argument("--evidence-dir"); pw.add_argument("--follow", action="store_true"); pw.add_argument("--once", action="store_true"); pw.set_defaults(fn=cmd_watch)
     ps = sub.add_parser("show"); ps.add_argument("hash"); ps.add_argument("--evidence-dir"); ps.set_defaults(fn=cmd_show)
     sub.add_parser("prove").set_defaults(fn=cmd_prove)
     sub.add_parser("selftest").set_defaults(fn=cmd_selftest)
