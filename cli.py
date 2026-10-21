@@ -171,6 +171,12 @@ def build_parser() -> argparse.ArgumentParser:
     w.add_argument("--registry", default=None, help="axiom registry (default: the sample registry)")
     w.add_argument("--log", action="store_true", help="log gated EMITs to the mesh ledger")
     w.set_defaults(fn=cmd_watch)
+
+    # evidence — new in 0.4.0: attach evidence to each emit so grading comes from
+    # evidence, not memory.
+    import evidence
+    evidence.register(sub)
+
     return p
 
 
