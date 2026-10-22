@@ -66,7 +66,9 @@ verifiable) or **DEFERred** (no matching axiom). Grade what it emits:
 
 ```bash
 aura-pce list                          # gated emits awaiting a human grade
-aura-pce grade <hash> real|noise       # dispose each one; the precision earns its n
+aura-pce evidence watch                # tail the ledger, capture evidence per new emit
+aura-pce evidence show <hash>          # the bundle that was captured when the emit fired
+aura-pce grade <hash> real|noise       # dispose each one from evidence, not memory
 ```
 
 ## For reviewers — reproduce the audit in two minutes
@@ -79,6 +81,8 @@ pip install aura-pce       # pure stdlib — nothing else is downloaded
 aura-pce prove             # the provenance proof
 aura-pce init              # seeds the sample registry + demo ledger
 aura-pce selftest          # every self-test this install can run
+aura-pce evidence prove    # the evidence-capture proof (new in 0.4.0)
+aura-pce evidence selftest # every evidence-collector self-test
 ```
 
 **`aura-pce prove`** finishes with:
@@ -94,6 +98,16 @@ There is no code path that prints a placeholder percentage.
 **`aura-pce selftest`** (after `init`) finishes with ten green suites and `ALL GREEN`. Nine
 run on the standard library alone; `embedder` additionally runs if a sentence embedder is
 available (the `[live]` extra installs one).
+
+**`aura-pce evidence prove`** writes a synthetic emit to a temp ledger, triggers the watcher
+once, verifies each required field of the captured bundle, and finishes with:
+
+> ```
+> PROVE: PASS
+> CITE ONLY: 'aura-pce evidence prove passes on this install'.
+> ```
+
+The capture mechanism ships; your bundles stay on your own disk and are never uploaded.
 
 **If you skip `init`** and run `selftest` first, `logic_lane` fails with:
 
