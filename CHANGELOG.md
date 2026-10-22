@@ -2,6 +2,24 @@
 
 All notable changes to aura-pce.
 
+## [0.4.1] — 2026-10-22
+
+### Documentation only — no code change
+
+Fixes two gaps in the published README that hid the evidence-capture mechanism shipped in
+0.4.0:
+
+- **`For reviewers — reproduce the audit in two minutes`** now includes
+  `aura-pce evidence prove` and `aura-pce evidence selftest` with their expected output,
+  matching the shape of the other reproducible checks.
+- **`Point it at your box`** quick-start now shows `aura-pce evidence watch` and
+  `aura-pce evidence show <hash>` alongside `aura-pce grade`, so a reviewer who follows the
+  quick-start grades from evidence, not from memory.
+
+A README that announces a mechanism without showing the reviewer how to see it is the exact
+defect this project exists to catch. The wheel and sdist for 0.4.1 are byte-identical to
+0.4.0 except for the embedded README and the version bump; CI runs the same gates.
+
 ## [0.4.0] — 2026-10-21
 
 ### Added — `aura-pce evidence` — attach evidence to each emit so grading comes from evidence, not memory
