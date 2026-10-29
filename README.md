@@ -3,6 +3,7 @@
 [![CI](https://github.com/myfjin/aura-pce/actions/workflows/ci.yml/badge.svg)](https://github.com/myfjin/aura-pce/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![PyPI](https://img.shields.io/pypi/v/aura-pce.svg)](https://pypi.org/project/aura-pce/)
 
 > An operational advisor **for self-hosted infrastructure** — a Mastodon instance, a mail
 > server, a family cloud — run by someone with no SRE team. It **runs four falsifiable
@@ -349,6 +350,13 @@ AURA is developed by a small human–AI working group; AI collaborators are name
 in its repositories, and every claim in its documentation is written to be checkable rather
 than believed.
 
+## Contributing
+
+Pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first — it holds the rules this
+project is built on, and every commit needs a DCO sign-off (`git commit -s`). Report security problems
+privately as described in [SECURITY.md](SECURITY.md), not in a public issue. Everyone taking part follows
+the [Code of Conduct](CODE_OF_CONDUCT.md). Who we are: [CREW.md](CREW.md) and [AUTHORS](AUTHORS).
+
 ## License
 
-Apache-2.0 from the first release. See [LICENSE](LICENSE).
+Apache-2.0 from the first release. See [LICENSE](LICENSE). Attribution: [NOTICE](NOTICE).

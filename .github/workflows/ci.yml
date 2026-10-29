@@ -6,6 +6,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   # The dependency-free core: the provenance proof + every stdlib self-test, on all
   # supported Pythons. This is the gate — it needs nothing but the standard library.
@@ -83,3 +90,96 @@ jobs:
           python -m build
       - name: The artifacts contain every declared module, and it imports from a neutral cwd
         run: python packaging_check.py
+
+  # ---------------------------------------------------------------------------
+  # Privacy. This repository ships CODE and authored demo data, nothing else: real
+  # telemetry, ledgers and evidence bundles live on the operator's disk, and the rule
+  # base behind the sample registry is private. The checks are cheap and run on every
+  # push and PR. .github/ is excluded because this file has to spell out the patterns.
+  # ---------------------------------------------------------------------------
+  privacy:
+    name: privacy scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No private paths or host addresses in shipped files
+        run: |
+          set -euo pipefail
+          targets=$(git ls-files | grep -v '^\.github/')
+          hits=$(echo "$targets" | xargs grep -nIE '/home/au|/Users/s_[a-z]+|\.hermes/profiles|~/ai-lab|/ai-lab/|192\.168\.[0-9]' 2>/dev/null || true)
+          if [ -n "$hits" ]; then
+            echo "$hits"
+            echo "::error::a private path or host address is in a shipped file"
+            exit 1
+          fi
+          echo "clean: $(echo "$targets" | wc -l | tr -d ' ') files scanned"
+
+      - name: No credentials
+        run: |
+          set -euo pipefail
+          hits=$(git ls-files | grep -v '^\.github/' \
+                 | xargs grep -nIE 'sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|BEGIN [A-Z ]*PRIVATE KEY' 2>/dev/null || true)
+          if [ -n "$hits" ]; then
+            echo "$hits"
+            echo "::error::possible credential in a tracked file"
+            exit 1
+          fi
+          echo "clean"
+
+      - name: Only the authored demo data is tracked
+        run: |
+          set -euo pipefail
+          # data/sample_registry.jsonl and data/mesh-emits.jsonl are written by hand
+          # (nodes named demo-node-*). Any other ledger, cache or database is real data
+          # or derived from it, and does not belong in the repository.
+          hits=$(git ls-files | grep -E '\.(npz|npy|jsonl|db|sqlite|sqlite3)$' \
+                 | grep -vxE 'data/sample_registry\.jsonl|data/mesh-emits\.jsonl' || true)
+          if [ -n "$hits" ]; then
+            echo "$hits"
+            echo "::error::a data file outside the authored demo set is tracked"
+            exit 1
+          fi
+          echo "clean"
+
+  # -----------------------------------------------------------------------
+  # DCO sign-off enforcement. See CONTRIBUTING.md — we use the sign-off
+  # only; there is no CLA. Every commit in a PR must carry a
+  # `Signed-off-by:` trailer matching the commit author.
+  #
+  # Implemented inline, with no third-party action: the one we used before
+  # (tim-actions/dco@v1.1.0) declares `using: node12`, and GitHub has retired
+  # that runtime, so it failed silently. Because this job is a REQUIRED check,
+  # that failure blocked every pull request. This step is the same rule with no
+  # runtime to retire.
+  # -----------------------------------------------------------------------
+  dco:
+    name: DCO check
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify Signed-off-by on every PR commit
+        run: |
+          set -u
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          merge_base=$(git merge-base "$base" "$head")
+          fail=0
+          for sha in $(git rev-list "$merge_base..$head"); do
+            name=$(git log -1 --format='%an' "$sha")
+            email=$(git log -1 --format='%ae' "$sha")
+            expected="Signed-off-by: ${name} <${email}>"
+            # fixed-string match: the author email can contain regex metacharacters
+            # (e.g. the '+' in a GitHub noreply address), so -F, not an ERE.
+            if git log -1 --format='%B' "$sha" | sed 's/[[:space:]]*$//' | grep -qixF "$expected"; then
+              echo "OK    $sha  ($email)"
+            else
+              echo "::error::commit $sha is missing '${expected}'"
+              fail=1
+            fi
+          done
+          exit $fail
