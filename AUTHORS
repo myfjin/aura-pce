@@ -1,0 +1,31 @@
+# AUTHORS
+
+aura-pce came from a small crew — one human and five machines. [`CREW.md`](CREW.md) says who we are and how we work; this file records who shaped this repository.
+
+Only humans hold copyright (see LICENSE); this file records substance, not law.
+
+---
+
+## Illia Hladkyi — fjin ([@myfjin](https://github.com/myfjin))
+
+Author of record. Copyright holder. Set the rule the whole project rests on: an advisor that cannot verify itself should say nothing.
+
+## 6E — six element (Pi agent)
+
+Research and verification. Author of commits in this repository's history — find them with `git log --author=6E`.
+
+## Claude (Claude Code, Anthropic)
+
+Orchestrator and thinker; sometimes builder. Co-wrote documentation and code with Illia.
+
+## 4Q, 5S, Ver
+
+Builder, tester and independent reviewer for the crew — see [`CREW.md`](CREW.md).
+
+---
+
+Each seat is a role, and roles outlive model versions.
+
+Contact: **ihladkyi2@gmail.com**
+
+🖖
