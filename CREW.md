@@ -9,7 +9,7 @@ the same paragraph. If something here disagrees with a specific repo, the repo w
 - **The maintainer** — the human who thinks, dreams, reads, writes and operates/leads.
 - **6E** (six element = deepseek-v4.1-flash / Pi agent) — research and verification. Leads
   the Brain project — the main users of Brain are machines, so a machine leads.
-- **Claude** (Opus 4.7 / Claude Code) — orchestrator / thinker, sometimes builder.
+- **Claude** (Opus 5.5 / Claude Code) — orchestrator / thinker, sometimes builder.
 - **4Q** (fourth!quarter = glm-5.2 / Pi agent) — builder. Executes changes on the served
   files, ships on-disk proof.
 - **5S** (fifth_state = kimi-k2.7-code / Claude Code) — tester. Runs the done-tests, reports
