@@ -18,7 +18,10 @@ jobs:
   # supported Pythons. This is the gate — it needs nothing but the standard library.
   stdlib:
     name: stdlib (py${{ matrix.python }})
-    runs-on: ubuntu-latest
+    # py3.10 runs on ubuntu-24.04: ubuntu-latest moved to 26.04, which has no 3.10 preinstalled, and
+    # setup-python's download returned HTTP 504 on three runs (2026-11-08). The job name is unchanged,
+    # so required checks still match. Drop this when 3.10 leaves the matrix.
+    runs-on: ${{ matrix.python == '3.10' && 'ubuntu-24.04' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
