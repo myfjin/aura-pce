@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/myfjin/aura-pce/actions/workflows/ci.yml/badge.svg)](https://github.com/myfjin/aura-pce/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![PyPI](https://img.shields.io/pypi/v/aura-pce.svg)](https://pypi.org/project/aura-pce/)
 
 > An operational advisor **for self-hosted infrastructure** — a Mastodon instance, a mail
@@ -31,7 +31,7 @@ pip install aura-pce            # the core: pure standard library, zero dependen
 pip install "aura-pce[live]"    # + a sentence embedder + psutil, for `watch` on your box
 ```
 
-The **core** needs nothing but Python ≥ 3.10 — the provenance proof, the self-tests and the
+The **core** needs nothing but Python ≥ 3.11 — the provenance proof, the self-tests and the
 earned-metric reports all run on the standard library alone. The **`[live]`** extra adds the
 one thing recognition needs (a sentence embedder) plus a cross-platform telemetry reader, so
 `aura-pce watch` can gate the real state of the machine you run it on.
